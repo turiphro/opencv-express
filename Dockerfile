@@ -8,4 +8,4 @@ RUN npm install -g nodemon forever && npm install
 COPY ./src /app/src
 
 #CMD ["nodemon", "-L", "./src/server.js"]
-CMD ["forever", "./src/server.js", "start"]
+CMD ["forever", "--watch", "./src/server.js", "start"]

@@ -36,6 +36,7 @@
           <button onclick="detectORB()"> Detect ORB Features </button>
           <button onclick="detectSURF()"> Detect SURF Features </button>
           <button onclick="detectSIFT()"> Detect SIFT Features </button>
+          <label><input type="checkbox" id="continuous" \> Continuous</label>
         </div>
       </section>
       <section>
@@ -56,6 +57,7 @@
     <script>
       var selectedFile;
       var selectedFileData;
+      var continuousEnabled = false;
 
       function onImageSelected(e) {
         selectedFile = e.target.files[0];
@@ -104,6 +106,21 @@
       function detectSIFT() {
         return sendDetectionRequest(selectedFileData, 'features/sift');
       }
+
+      document.getElementById('continuous').addEventListener('change', function(e) {
+          console.log("changing", e);
+          continuousEnabled = e.target.checked;
+      });
+
+      function loop() {
+          // continuous loop of capturing (if enabled)
+          if (continuousEnabled) {
+              document.getElementById('snap').click();
+              detectFingers();
+          }
+          setTimeout(loop, 1000);
+      };
+      loop();
 
     </script>
 

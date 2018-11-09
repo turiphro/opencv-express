@@ -1,19 +1,40 @@
-
 module.exports = (img) => {
 
   var results = {};
 
-  // Based on:
-  // https://github.com/justadudewhohacks/opencv4nodejs/blob/master/examples/handGestureRecognition0.js
+
+  /*
+   * Step 1: remove faces
+   */
+  const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
+
+  const detection = classifier.detectMultiScale(img.bgrToGray());
+
+  // remove faces
+  detection.objects.forEach((rect, i) => {
+    const black = new cv.Vec(0, 0, 0);
+    img.drawRectangle(
+      new cv.Point(rect.x, rect.y),
+      new cv.Point(rect.x + rect.width, rect.y + rect.height),
+      { color: black, thickness: -1 }
+    );
+  });
+
+
+  /*
+   * Step 2: find hand contour
+   * Based on: https://github.com/justadudewhohacks/opencv4nodejs/blob/master/examples/handGestureRecognition0.js
+   */
 
   // segmenting by skin color (has to be adjusted)
-  const skinColorUpper = hue => new cv.Vec(hue, 0.8 * 255, 0.6 * 255);
-  const skinColorLower = hue => new cv.Vec(hue, 0.1 * 255, 0.05 * 255);
+  const skinColorUpper = hue => new cv.Vec(hue, 0.80 * 255, 0.99 * 255);
+  const skinColorLower = hue => new cv.Vec(hue, 0.10 * 255, 0.05 * 255);
 
   const makeHandMask = (img) => {
 	// filter by skin color
 	const imgHLS = img.cvtColor(cv.COLOR_BGR2HLS);
-	const rangeMask = imgHLS.inRange(skinColorLower(0), skinColorUpper(15));
+	const rangeMask = imgHLS.inRange(skinColorLower(0), skinColorUpper(15)).or(
+	    imgHLS.inRange(skinColorLower(160), skinColorUpper(180)));
 
 	// remove noise
 	const blurred = rangeMask.blur(new cv.Size(10, 10));
@@ -113,84 +134,96 @@ module.exports = (img) => {
 	  return angleDeg < maxAngleDeg;
 	});
 
+  const filterVerticesByHeight = (vertices, minHeight) =>
+	vertices.filter((v) => {
+	  return v.pt.y < minHeight;
+	});
+
   const blue = new cv.Vec(255, 0, 0);
   const green = new cv.Vec(0, 255, 0);
   const red = new cv.Vec(0, 0, 255);
 
   // main
-	const resizedImg = img.resizeToMax(640);
+  const resizedImg = img.resizeToMax(640);
 
-	const handMask = makeHandMask(resizedImg);
-    results.mask = handMask
-	const handContour = getHandContour(handMask);
-	if (!handContour) {
-	  return;
-	}
+  const handMask = makeHandMask(resizedImg);
+  results.mask = handMask;
+  
+  const handContour = getHandContour(handMask);
+  if (!handContour) {
+    return results;
+  }
+  
+  const maxPointDist = 25;
+  const hullIndices = getRoughHull(handContour, maxPointDist);
+  
+  // get defect points of hull to contour and return vertices
+  // of each hull point to its defect points
+  const vertices = getHullDefectVertices(handContour, hullIndices);
+  
+  // fingertip points are those which have a sharp angle to its defect points
+  const maxAngleDeg = 60;
+  const verticesWithValidAngle = filterVerticesByAngle(vertices, maxAngleDeg);
 
-	const maxPointDist = 25;
-	const hullIndices = getRoughHull(handContour, maxPointDist);
+  // filter results from bottom 50% (usually false positives)
+  var maxHeight = 0;
+  var minHeight = 1000;
+  vertices.forEach((v) => {
+      maxHeight = Math.max(maxHeight, v.pt.y);
+      minHeight = Math.min(minHeight, v.pt.y);
+  });
+  //console.log("MIN " + minHeight + ", MAX " + maxHeight);
+  const heightThreshold = minHeight + 0.5 * (maxHeight - minHeight);
+  const verticesWithValidAngleTop = filterVerticesByHeight(verticesWithValidAngle, heightThreshold);
+  
+  const annotated = resizedImg.copy();
+  // draw bounding box and center line
+  annotated.drawContours(
+    [handContour],
+    blue,
+    { thickness: 2 }
+  );
+  
+  // draw points and vertices
+  verticesWithValidAngleTop.forEach((v) => {
+    annotated.drawLine( v.pt, v.d1, { color: green, thickness: 2 });
+    annotated.drawLine( v.pt, v.d2, { color: green, thickness: 2 });
+    annotated.drawEllipse( new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0), { color: red, thickness: 2 });
+    annotated.drawEllipse( new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0), { color: red, thickness: 2 });
+  });
 
-	// get defect points of hull to contour and return vertices
-	// of each hull point to its defect points
-	const vertices = getHullDefectVertices(handContour, hullIndices);
+  // display detection result
+  const numFingersUp = verticesWithValidAngleTop.length;
+  const numFingersUpUnfiltered = verticesWithValidAngle.length;
+  annotated.drawRectangle(
+    new cv.Point(10, 10),
+    new cv.Point(70, 70),
+    { color: green, thickness: 2 }
+  );
+  
+  var fontScale = 2;
+  annotated.putText(
+    String(numFingersUp),
+    new cv.Point(20, 60),
+    cv.FONT_ITALIC,
+    fontScale,
+    { color: green, thickness: 2 }
+  );
+  fontScale = 0.8;
+  annotated.putText(
+    String(numFingersUpUnfiltered),
+    new cv.Point(50, 70),
+    cv.FONT_ITALIC,
+    fontScale,
+    { color: green, thickness: 1 }
+  );
+  
+  const { rows, cols } = annotated;
+  const sideBySide = new cv.Mat(rows, cols * 2, cv.CV_8UC3);
+  annotated.copyTo(sideBySide.getRegion(new cv.Rect(0, 0, cols, rows)));
+  resizedImg.copyTo(sideBySide.getRegion(new cv.Rect(cols, 0, cols, rows)));
 
-	// fingertip points are those which have a sharp angle to its defect points
-	const maxAngleDeg = 60;
-	const verticesWithValidAngle = filterVerticesByAngle(vertices, maxAngleDeg);
-
-	const result = resizedImg.copy();
-	// draw bounding box and center line
-	resizedImg.drawContours(
-	  [handContour],
-	  blue,
-	  { thickness: 2 }
-	);
-
-	// draw points and vertices
-	verticesWithValidAngle.forEach((v) => {
-	  resizedImg.drawLine(
-		v.pt,
-		v.d1,
-		{ color: green, thickness: 2 }
-	  );
-	  resizedImg.drawLine(
-		v.pt,
-		v.d2,
-		{ color: green, thickness: 2 }
-	  );
-	  resizedImg.drawEllipse(
-		new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0),
-		{ color: red, thickness: 2 }
-	  );
-	  result.drawEllipse(
-		new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0),
-		{ color: red, thickness: 2 }
-	  );
-	});
-
-	// display detection result
-	const numFingersUp = verticesWithValidAngle.length;
-	result.drawRectangle(
-	  new cv.Point(10, 10),
-	  new cv.Point(70, 70),
-	  { color: green, thickness: 2 }
-	);
-
-	const fontScale = 2;
-	result.putText(
-	  String(numFingersUp),
-	  new cv.Point(20, 60),
-	  cv.FONT_ITALIC,
-	  fontScale,
-	  { color: green, thickness: 2 }
-	);
-
-	const { rows, cols } = result;
-	const sideBySide = new cv.Mat(rows, cols * 2, cv.CV_8UC3);
-	result.copyTo(sideBySide.getRegion(new cv.Rect(0, 0, cols, rows)));
-	resizedImg.copyTo(sideBySide.getRegion(new cv.Rect(cols, 0, cols, rows)));
-
-  results.annotation = result;
+  results.annotation = annotated;
 
   return results;
 };
