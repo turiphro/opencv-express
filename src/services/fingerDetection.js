@@ -1,6 +1,18 @@
 module.exports = (img) => {
 
-  var results = {};
+  function getTranscription(numberOfFingers) {
+      if (numberOfFingers == 0) {
+          return "turn of light";
+      } else {
+          return "turn on light";
+      }
+  }
+
+  var results = {
+      annotated: img.copy(),
+      numOfFingers: 0,
+      transcription: getTranscription(0),
+  };
 
 
   /*
@@ -224,6 +236,9 @@ module.exports = (img) => {
   resizedImg.copyTo(sideBySide.getRegion(new cv.Rect(cols, 0, cols, rows)));
 
   results.annotation = annotated;
+  results.numberOfFingers = numFingersUp;
+  results.numberOfFingersUnfiltered = numFingersUpUnfiltered;
+  results.transcription = getTranscription(numFingersUp);
 
   return results;
 };

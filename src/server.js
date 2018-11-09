@@ -1,8 +1,10 @@
 const express = require('express');
+const cors = require('cors')
 
 const services = require('./services');
 
 const app = express();
+app.use(cors());
 app.set('views', __dirname + '/views');
 app.set('view engine', 'html');
 
@@ -37,6 +39,9 @@ app.post('/fingers', requiresImgBase64, (req, res) => {
   res.status(202).send({
       base64Data: fingersImgBase64,
       mask64Data: maskImgBase64,
+      numberOfFingers: fingersResults.numberOfFingers,
+      numberOfFingersUnfiltered: fingersResults.numberOfFingersUnfiltered,
+      transcription: fingersResults.transcription,
   });
 });
 
@@ -59,5 +64,5 @@ app.post('/features/sift', requiresImgBase64, (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log('Example app listening on port 3000!');
+  console.log('VSR service listening on port 3000!');
 });
