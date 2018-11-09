@@ -18,5 +18,5 @@ function sendXhr(imageData, endpoint, onResult) {
 
   xhr.open('POST', getServiceURI(endpoint), true);
   xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.send(JSON.stringify({ imgBase64 : imageData }));
+  xhr.send(JSON.stringify({ imgBase64 : imageData, debug: true }));
 }

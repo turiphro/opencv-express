@@ -4,4 +4,4 @@ cv:
   volumes:
     - "./src:/app/src"
   ports:
-    - "3001:3000"
+    - "80:3000"

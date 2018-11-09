@@ -9,8 +9,8 @@ module.exports = (img) => {
   }
 
   var results = {
-      annotated: img.copy(),
-      numOfFingers: 0,
+      annotation: img.copy(),
+      numberOfFingers: 0,
       transcription: getTranscription(0),
   };
 
@@ -188,9 +188,9 @@ module.exports = (img) => {
   const heightThreshold = minHeight + 0.5 * (maxHeight - minHeight);
   const verticesWithValidAngleTop = filterVerticesByHeight(verticesWithValidAngle, heightThreshold);
   
-  const annotated = resizedImg.copy();
+  const annotation = resizedImg.copy();
   // draw bounding box and center line
-  annotated.drawContours(
+  annotation.drawContours(
     [handContour],
     blue,
     { thickness: 2 }
@@ -198,23 +198,23 @@ module.exports = (img) => {
   
   // draw points and vertices
   verticesWithValidAngleTop.forEach((v) => {
-    annotated.drawLine( v.pt, v.d1, { color: green, thickness: 2 });
-    annotated.drawLine( v.pt, v.d2, { color: green, thickness: 2 });
-    annotated.drawEllipse( new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0), { color: red, thickness: 2 });
-    annotated.drawEllipse( new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0), { color: red, thickness: 2 });
+    annotation.drawLine( v.pt, v.d1, { color: green, thickness: 2 });
+    annotation.drawLine( v.pt, v.d2, { color: green, thickness: 2 });
+    annotation.drawEllipse( new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0), { color: red, thickness: 2 });
+    annotation.drawEllipse( new cv.RotatedRect(v.pt, new cv.Size(20, 20), 0), { color: red, thickness: 2 });
   });
 
   // display detection result
   const numFingersUp = verticesWithValidAngleTop.length;
   const numFingersUpUnfiltered = verticesWithValidAngle.length;
-  annotated.drawRectangle(
+  annotation.drawRectangle(
     new cv.Point(10, 10),
     new cv.Point(70, 70),
     { color: green, thickness: 2 }
   );
   
   var fontScale = 2;
-  annotated.putText(
+  annotation.putText(
     String(numFingersUp),
     new cv.Point(20, 60),
     cv.FONT_ITALIC,
@@ -222,7 +222,7 @@ module.exports = (img) => {
     { color: green, thickness: 2 }
   );
   fontScale = 0.8;
-  annotated.putText(
+  annotation.putText(
     String(numFingersUpUnfiltered),
     new cv.Point(50, 70),
     cv.FONT_ITALIC,
@@ -230,12 +230,12 @@ module.exports = (img) => {
     { color: green, thickness: 1 }
   );
   
-  const { rows, cols } = annotated;
+  const { rows, cols } = annotation;
   const sideBySide = new cv.Mat(rows, cols * 2, cv.CV_8UC3);
-  annotated.copyTo(sideBySide.getRegion(new cv.Rect(0, 0, cols, rows)));
+  annotation.copyTo(sideBySide.getRegion(new cv.Rect(0, 0, cols, rows)));
   resizedImg.copyTo(sideBySide.getRegion(new cv.Rect(cols, 0, cols, rows)));
 
-  results.annotation = annotated;
+  results.annotation = annotation;
   results.numberOfFingers = numFingersUp;
   results.numberOfFingersUnfiltered = numFingersUpUnfiltered;
   results.transcription = getTranscription(numFingersUp);

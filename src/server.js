@@ -36,13 +36,16 @@ app.post('/fingers', requiresImgBase64, (req, res) => {
   const maskImg = fingersResults.mask;
   const fingersImgBase64 = services.encodeJpgBase64(fingersImg);
   const maskImgBase64 = services.encodeJpgBase64(maskImg);
-  res.status(202).send({
-      base64Data: fingersImgBase64,
-      mask64Data: maskImgBase64,
+  var responseBody = {
       numberOfFingers: fingersResults.numberOfFingers,
       numberOfFingersUnfiltered: fingersResults.numberOfFingersUnfiltered,
       transcription: fingersResults.transcription,
-  });
+  };
+  if (req.body.debug) {
+      responseBody.base64Data = fingersImgBase64;
+      responseBody.mask64Data = maskImgBase64;
+  }
+  res.status(202).send(responseBody);
 });
 
 app.post('/features/orb', requiresImgBase64, (req, res) => {
