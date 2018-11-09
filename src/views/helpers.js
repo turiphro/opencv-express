@@ -31,4 +31,28 @@ function displayImage(imageId, imageData) {
     imgEl.height = scaledDims.height;
   };
   img.src = imageData;
+
+}
+
+function displayImageCanvas(canvasId, imageId, imageData) {
+  var imgEl = document.getElementById(imageId);
+
+  console.log("DATA RECEIVED", imageData);
+  // rescale displayed image if it is too large
+  var img = new Image();
+  img.onload = function(e) {
+    var img = e.target;
+    var scaledDims = getImageDisplayScale(img);
+    imgEl.src = imageData;
+    imgEl.width = scaledDims.width;
+    imgEl.height = scaledDims.height;
+  };
+  img.src = imageData;
+
+  // draw on canvas as well
+  var canvas = document.getElementById(canvasId);
+  var context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(img, 0, 0, 640, 480);
+  console.log("DRAWING");
 }
