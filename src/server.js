@@ -28,6 +28,18 @@ app.post('/faces', requiresImgBase64, (req, res) => {
   res.status(202).send({ base64Data: facesImgBase64 });
 });
 
+app.post('/fingers', requiresImgBase64, (req, res) => {
+  const fingersResults = services.detectFingers(req.params.img);
+  const fingersImg = fingersResults.annotation;
+  const maskImg = fingersResults.mask;
+  const fingersImgBase64 = services.encodeJpgBase64(fingersImg);
+  const maskImgBase64 = services.encodeJpgBase64(maskImg);
+  res.status(202).send({
+      base64Data: fingersImgBase64,
+      mask64Data: maskImgBase64,
+  });
+});
+
 app.post('/features/orb', requiresImgBase64, (req, res) => {
   const orbImg = services.detectKeyPointsORB(req.params.img);
   const orbImgBase64 = services.encodeJpgBase64(orbImg);

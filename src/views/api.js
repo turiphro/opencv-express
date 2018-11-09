@@ -8,8 +8,8 @@ function sendXhr(imageData, endpoint, onResult) {
   xhr.onreadystatechange = function(err) {
     if (xhr.readyState == 4)  {
       if (xhr.status == 202) {
-        const base64Data = JSON.parse(xhr.responseText).base64Data;
-        onResult(null, 'data:image/jpeg;base64,' + base64Data);
+        const response = JSON.parse(xhr.responseText);
+        onResult(null, response);
       } else {
         onResult(xhr.status + ': ' + xhr.responseText, null);
       }

@@ -32,6 +32,7 @@
         </div>
         <div class="centered-container">
           <button onclick="detectFaces()"> Detect Faces </button>
+          <button onclick="detectFingers()"> Detect Fingers </button>
           <button onclick="detectORB()"> Detect ORB Features </button>
           <button onclick="detectSURF()"> Detect SURF Features </button>
           <button onclick="detectSIFT()"> Detect SIFT Features </button>
@@ -45,6 +46,7 @@
         <div class="centered-container">
           <img id="input" src="" width="640" height="480" />
           <img id="output" src="" width="640" height="480" />
+          <img id="debug" src="" width="640" height="480" />
         </div>
       </section>
     </main>
@@ -62,23 +64,33 @@
           selectedFileData = re.target.result;
           displayImage('input', selectedFileData);
           document.getElementById('output').src = '';
+          document.getElementById('debug').src = '';
         };
         reader.readAsDataURL(selectedFile);
       }
 
       function sendDetectionRequest(imageData, endpoint) {
-        sendXhr(imageData, endpoint, function(err, responseImgData) {
+        sendXhr(imageData, endpoint, function(err, responseData) {
           if (err) {
             console.error(err);
           } else {
+            const base64Preset = 'data:image/jpeg;base64,';
+            const responseImgData = base64Preset + responseData.base64Data;
             displayImage('output', responseImgData);
-            //displayImageCanvas('canvas', 'output', responseImgData);
+            if (responseData.mask64Data) {
+              const maskImgData = base64Preset + responseData.mask64Data;
+              displayImage('debug', maskImgData);
+            }
           }
         });
       }
 
       function detectFaces() {
         return sendDetectionRequest(selectedFileData, 'faces');
+      }
+
+      function detectFingers() {
+        return sendDetectionRequest(selectedFileData, 'fingers');
       }
 
       function detectORB() {
@@ -144,7 +156,6 @@
 				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 				selectedFileData = canvas.toDataURL();
 
-				//context.drawImage(video, 0, 0, 640, 480);
 				displayImage('input', selectedFileData);
 			});
 		}, false);

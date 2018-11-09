@@ -54,5 +54,4 @@ function displayImageCanvas(canvasId, imageId, imageData) {
   var context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(img, 0, 0, 640, 480);
-  console.log("DRAWING");
 }
